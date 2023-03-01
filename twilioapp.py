@@ -5,6 +5,7 @@ class TwilioClient(Client):
         super().__init__(account_sid, token)
         self.from_number = from_number
 
+    # Send an image to the specified number whatsapp
     def sendImage(self, to_number, image_url, title):
         return self.messages.create(
             from_ = f"whatsapp:{self.from_number}",
