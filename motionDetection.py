@@ -35,7 +35,7 @@ def main():
 
         if alarm_mode:
             
-            diff, frame_bw = calculateImageDifference(frame, start_frame)
+            diff, frame_bw = calculateFrameDifference(frame, start_frame)
             threshold = getThresholdFrame(diff)
             start_frame = frame_bw
 
@@ -56,11 +56,11 @@ def main():
                 alarm_counter = 0
 
         key_pressed = cv2.waitKey(30)
-        if motionKeyIsPressed(key_pressed):
+        if isChangeModeKeyPressed(key_pressed):
             alarm_mode = not alarm_mode
             alarm_counter = 0
         
-        if shutdownKeyIsPressed(key_pressed):
+        if isShutdownKeyPressed(key_pressed):
             alarm_mode = False
             break
 
@@ -124,7 +124,7 @@ def getInitialFrame(cap):
 
     return start_frame
 
-def calculateImageDifference(actual_frame, start_frame):
+def calculateFrameDifference(actual_frame, start_frame):
     frame_bw = cv2.cvtColor(actual_frame, cv2.COLOR_BGR2GRAY)
     frame_bw = cv2.GaussianBlur(frame_bw, (5, 5), 0)
     diff = cv2.absdiff(frame_bw, start_frame)
@@ -138,10 +138,10 @@ def getThresholdFrame(diff_frame):
 def getTime():
     return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-def motionKeyIsPressed(key):
-    return key == ord('t')
+def isChangeModeKeyPressed(key):
+    return key == ord('c')
 
-def shutdownKeyIsPressed(key):
+def isShutdownKeyPressed(key):
     return key == ord('q')
 
 def printDetectionMessage():
