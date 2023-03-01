@@ -15,17 +15,75 @@ cloud_name = "[YOUR_CREDS]"
 api_key = "[YOUR_CREDS]"
 api_secret = "[YOUR_CREDS]"
 
+# Global variables
 alarm = False
 alarm_mode = False
-alarm_counter = 0
+max_threshold = 250000
+max_alarm_counter = 15
+
+def main():
+    cap = setCamera()
+    start_frame = getInitialFrame(cap)
+
+    alarm_counter = 0
+
+    while True:
+        frame = readNewFrame(cap)
+
+        if alarm_mode:
+            
+            diff, frame_bw = calculateImageDifference(frame, start_frame)
+            threshold = getThresholdFrame(diff)
+            start_frame = frame_bw
+
+            if threshold.sum() > max_threshold:
+                alarm_counter += 1
+            else:
+                if alarm_counter > 0:
+                    alarm_counter -= 1
+
+            cv2.imshow("Cam", threshold)
+
+        else:
+            cv2.imshow("Cam", frame)
+
+        if alarm_counter > max_alarm_counter:
+            if not alarm:
+                triggerAlarm(frame)
+                alarm_counter = 0
+
+        key_pressed = cv2.waitKey(30)
+        if motionKeyIsPressed(key_pressed):
+            alarm_mode = not alarm_mode
+            alarm_counter = 0
+        
+        if closeKeyIsPressed(key_pressed):
+            alarm_mode = False
+            break
+
+    shutdownCamera(cap)
+
+def triggerAlarm(frame):
+    global alarm
+
+    alarm = True
+    t = threading.Thread(target=sendAlarmFrame(frame))
+    t.start()
+
+def readNewFrame(cap):
+    _, frame = cap.read()
+    return imutils.resize(frame, width=500)
 
 def getInitialFrame(cap):
-    _, start_frame = cap.read()
-    start_frame = imutils.resize(start_frame, width=500)
+    start_frame = readNewFrame(cap)
     start_frame = cv2.cvtColor(start_frame, cv2.COLOR_BGR2GRAY)
     start_frame = cv2.GaussianBlur(start_frame, (21, 21), 0)
 
     return start_frame
+
+def getThresholdFrame(diff_frame):
+    threshold = cv2.threshold(diff_frame, 25, 255, cv2.THRESH_BINARY)
+    return threshold[1]
 
 def setCamera():
     cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
@@ -35,13 +93,7 @@ def setCamera():
 
     return cap
 
-cap = setCamera()
-start_frame = getInitialFrame(cap)
-
-def initializeGlobals():
-    pass
-
-def sendMessageToWhatsapp(image_url, title):
+def sendImageToWhatsapp(image_url, title):
     twilio = TwilioClient(account_sid, token)
     twilio.sendImage(image_url=image_url, to_number="+557999818770", title=title)
 
@@ -60,7 +112,7 @@ def calculateImageDifference(actual_frame, start_frame):
 def getTime():
     return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-def triggerAlarm(frame):
+def sendAlarmFrame(frame):
     global alarm
     
     if alarm_mode:
@@ -72,53 +124,21 @@ def triggerAlarm(frame):
         cv2.imwrite(filename, frame)
 
         image_url = uploadImageToCloud(filename, time)
-        sendMessageToWhatsapp(image_url, filename)
+        sendImageToWhatsapp(image_url, time)
 
         os.remove(filename)
 
     alarm = False
 
-while True:
-    _, frame = cap.read()
-    frame = imutils.resize(frame, width=500)
+def motionKeyIsPressed(key):
+    return key == ord('t')
 
-    if alarm_mode:
-        
-        diff, frame_bw = calculateImageDifference(frame, start_frame)
-        threshold = cv2.threshold(diff, 25, 255, cv2.THRESH_BINARY)[1]
-        start_frame = frame_bw
+def closeKeyIsPressed(key):
+    return key == ord('q')
 
-        if threshold.sum() > 250000:
-            alarm_counter += 1
-        else:
-            if alarm_counter > 0:
-                alarm_counter -= 1
+def shutdownCamera(cap):
+    cap.release()
+    cv2.destroyAllWindows()
 
-        cv2.imshow("Cam", threshold)
-
-    else:
-        cv2.imshow("Cam", frame)
-
-    if alarm_counter > 15:
-        if not alarm:
-            alarm = True
-            alarm_counter = 0
-            t = threading.Thread(target=triggerAlarm(frame))
-            t.start()
-
-    key_pressed = cv2.waitKey(30)
-    if key_pressed == ord('t'):
-        alarm_mode = not alarm_mode
-        alarm_counter = 0
-    
-    if key_pressed == ord('q'):
-        alarm_mode = False
-        break
-
-cap.release()
-cv2.destroyAllWindows()
-"""
 if __name__ == '__main__':
-    initializeGlobals()
     main()
-"""
