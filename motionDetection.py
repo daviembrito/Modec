@@ -9,6 +9,8 @@ from twilioapp import TwilioClient
 # Twilio credentials
 account_sid = "[YOUR_CREDS]"
 token = "[YOUR_CREDS]"
+cellphone_number = "[YOUR_CREDS]"
+from_number = "[YOUR_CREDS]"
 
 # Cloudinary credentials
 cloud_name = "[YOUR_CREDS]"
@@ -22,6 +24,7 @@ max_threshold = 250000
 max_alarm_counter = 15
 
 def main():
+    global alarm_mode
     cap = setCamera()
     start_frame = getInitialFrame(cap)
 
@@ -57,7 +60,7 @@ def main():
             alarm_mode = not alarm_mode
             alarm_counter = 0
         
-        if closeKeyIsPressed(key_pressed):
+        if shutdownKeyIsPressed(key_pressed):
             alarm_mode = False
             break
 
@@ -70,6 +73,46 @@ def triggerAlarm(frame):
     t = threading.Thread(target=sendAlarmFrame(frame))
     t.start()
 
+def sendAlarmFrame(frame):
+    global alarm
+    alarm = False
+
+    if not alarm_mode:
+        return
+    
+    printDetectionMessage()
+
+    time = getTime()
+    filename = writeFrameImage(frame, time)
+
+    image_url = uploadImageToCloud(filename, time)
+    sendImageToWhatsapp(image_url, time)
+
+    os.remove(filename)
+
+def writeFrameImage(frame, time):
+    filename = f"{time}.jpg"
+    cv2.imwrite(filename, frame)
+
+    return filename
+
+def uploadImageToCloud(image_path, title):
+    cloud = CloudinaryUploader(cloud_name, api_key, api_secret)
+    url = cloud.upload(image_path, title)
+    return url
+
+def sendImageToWhatsapp(image_url, title):
+    twilio = TwilioClient(account_sid, token, from_number)
+    twilio.sendImage(image_url=image_url, to_number=cellphone_number, title=title)
+
+def setCamera():
+    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+
+    return cap
+
 def readNewFrame(cap):
     _, frame = cap.read()
     return imutils.resize(frame, width=500)
@@ -81,27 +124,6 @@ def getInitialFrame(cap):
 
     return start_frame
 
-def getThresholdFrame(diff_frame):
-    threshold = cv2.threshold(diff_frame, 25, 255, cv2.THRESH_BINARY)
-    return threshold[1]
-
-def setCamera():
-    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-
-    return cap
-
-def sendImageToWhatsapp(image_url, title):
-    twilio = TwilioClient(account_sid, token)
-    twilio.sendImage(image_url=image_url, to_number="+557999818770", title=title)
-
-def uploadImageToCloud(image_path, title):
-    cloud = CloudinaryUploader(cloud_name, api_key, api_secret)
-    url = cloud.upload(image_path, title)
-    return url
-
 def calculateImageDifference(actual_frame, start_frame):
     frame_bw = cv2.cvtColor(actual_frame, cv2.COLOR_BGR2GRAY)
     frame_bw = cv2.GaussianBlur(frame_bw, (5, 5), 0)
@@ -109,32 +131,21 @@ def calculateImageDifference(actual_frame, start_frame):
     
     return diff, frame_bw
 
+def getThresholdFrame(diff_frame):
+    threshold = cv2.threshold(diff_frame, 25, 255, cv2.THRESH_BINARY)
+    return threshold[1]
+
 def getTime():
     return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-
-def sendAlarmFrame(frame):
-    global alarm
-    
-    if alarm_mode:
-        print(f"ALARM")
-
-        time = getTime()
-        filename = f"{time}.jpg"
-
-        cv2.imwrite(filename, frame)
-
-        image_url = uploadImageToCloud(filename, time)
-        sendImageToWhatsapp(image_url, time)
-
-        os.remove(filename)
-
-    alarm = False
 
 def motionKeyIsPressed(key):
     return key == ord('t')
 
-def closeKeyIsPressed(key):
+def shutdownKeyIsPressed(key):
     return key == ord('q')
+
+def printDetectionMessage():
+    print(f"[MOVEMENT DETECTED] Sending captured frame")
 
 def shutdownCamera(cap):
     cap.release()
