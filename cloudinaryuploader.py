@@ -15,5 +15,6 @@ class CloudinaryUploader():
             api_secret = self.secret
         )
 
-    def upload(self, image_path, title="title"):
-        return cloudinary.uploader.upload(image_path, public_id=title)["secure_url"]
+    # Upload a file to cloudinary and retrieve its url
+    def upload(self, file_path, title="title"):
+        return cloudinary.uploader.upload(file_path, public_id=title)["secure_url"]
