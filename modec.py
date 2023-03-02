@@ -1,3 +1,9 @@
+'''
+Modec - Motion Detection System
+Coded by: github.com/daviembrito
+Version: 0.1
+'''
+
 import os
 import threading
 from datetime import datetime
