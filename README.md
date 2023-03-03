@@ -6,7 +6,7 @@ The system goal is to provide a movement detector with the additional feature of
 
 Cloudinary API is used to upload a captured image of the moment to the cloud and getting it's URL. After that, Twilio API is used to send the image and it's timestamp to a desired WhatsApp number.
 
-The sensibility of the movement dectector can be adjusted by it's threshold and the maximum amount of consecutives alerts. 
+The sensibility of the movement detector can be adjusted by it's threshold and the maximum amount of consecutives alerts. 
 
 ## **Installation**
 
