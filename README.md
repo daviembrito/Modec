@@ -14,6 +14,8 @@ The sensibility of the movement detector can be adjusted by it's threshold and t
 
 ## **Usage**
 
+In order to get the program working, you will need to fill Cloudinary and Twilio API's credentials on ```modec.py```
+
 Executing the program:
 
 ```python3 modec.py```
