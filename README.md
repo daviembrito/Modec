@@ -18,6 +18,6 @@ Executing the program:
 
 ```python3 modec.py```
 
-Press ```c``` to change to the detection mode
+Press ```c``` to change to detection mode
 
 Press ```q``` to quit the program
